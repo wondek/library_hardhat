@@ -1,5 +1,86 @@
 // SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
+contract Library {
+    address public owner;
+    
+    struct Book {
+        uint256 id;
+        string title;
+        uint256 copies;
+    }
+    
+    mapping(uint256 => Book) public books;
+    mapping(address => mapping(uint256 => bool)) public borrowers;
+
+    uint256 public bookIndex;
+    
+    constructor() {
+        owner = msg.sender;
+    }
+    
+    modifier onlyOwner {
+        require(msg.sender == owner, "Only owner can perform this action.");
+        _;
+    }
+    
+    modifier canBorrow {
+        bool borrowed = false;
+        for (uint256 i = 1; i <= bookIndex; i++) {
+            if (borrowers[msg.sender][i]) {
+                borrowed = true;
+                break;
+            }
+        }
+        require(!borrowed, "You can't borrow the same book more than once at a time.");
+        _;
+    }
+    
+    function addBook(string memory title, uint256 copies) public onlyOwner {
+        bookIndex++;
+        books[bookIndex] = Book(bookIndex, title, copies);
+    }
+    
+    function borrowBook(uint256 id) public canBorrow {
+        require(id <= bookIndex, "The book does not exist.");
+        require(books[id].copies > 0, "There are no available copies of the book.");
+        books[id].copies--;
+        borrowers[msg.sender][id] = true;
+    }
+    
+    function returnBook(uint256 id) public {
+        require(borrowers[msg.sender][id], "You haven't borrowed this book.");
+        books[id].copies++;
+        borrowers[msg.sender][id] = false;
+    }
+    
+    function viewBorrowers(uint256 id) public view returns (address[] memory) {
+        address[] memory bookBorrowers = new address[](bookIndex);
+        uint256 index = 0;
+        for (uint256 i = 0; i < bookIndex; i++) {
+            if (borrowers[msg.sender][id]) {
+                bookBorrowers[index] = msg.sender;
+                index++;
+            }
+        }
+        return bookBorrowers;
+    }
+    
+    function viewAvailableBooks() public view returns (uint256[] memory) {
+        uint256[] memory availableBooks = new uint256[](bookIndex);
+        uint256 index = 0;
+        for (uint256 i = 1; i <= bookIndex; i++) {
+            if (books[i].copies > 0) {
+                availableBooks[index] = books[i].id;
+                index++;
+            }
+        }
+        return availableBooks;
+    }
+}
+
+
+/*
 pragma solidity ^0.8.0;
 
 contract Library {
@@ -78,5 +159,5 @@ contract Library {
         payable(msg.sender).transfer(amount);
     }
 }
-
+*/
 
